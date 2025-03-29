@@ -1,29 +1,31 @@
 package io.github.theapache64.retrosheetsample
 
-import com.github.theapache64.retrosheet.RetrosheetInterceptor
-import com.github.theapache64.retrosheet.annotations.Read
-import com.github.theapache64.retrosheet.annotations.Write
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
-import com.squareup.moshi.Moshi
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
+import de.jensklingenberg.ktorfit.Ktorfit
+import de.jensklingenberg.ktorfit.http.Body
+import de.jensklingenberg.ktorfit.http.GET
+import de.jensklingenberg.ktorfit.http.POST
+import io.github.theapache64.retrosheet.annotations.Read
+import io.github.theapache64.retrosheet.annotations.Write
+import io.github.theapache64.retrosheet.core.RetrosheetConfig
+import io.github.theapache64.retrosheet.core.RetrosheetConverter
+import io.github.theapache64.retrosheet.core.createRetrosheetPlugin
+import io.ktor.client.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 const val SHEET_NAME = "notes"
 const val ADD_NOTE_ENDPOINT = "add_note"
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class Note(
-    @Json(name = "Timestamp")
+    @SerialName("Timestamp")
     val createdAt: String? = null,
-    @Json(name = "Title")
+    @SerialName("Title")
     val title: String,
-    @Json(name = "Description")
-    val description: String
+    @SerialName("Description")
+    val description: String?
 )
 
 
@@ -38,7 +40,7 @@ interface NotesApi {
 }
 
 fun buildNotesApi(): NotesApi {
-    val retrosheetInterceptor = RetrosheetInterceptor.Builder()
+    val config = RetrosheetConfig.Builder()
         .setLogging(true)
         // To Read
         .addSheet(
@@ -52,17 +54,18 @@ fun buildNotesApi(): NotesApi {
         )
         .build()
 
-    val okHttpClient = OkHttpClient.Builder()
-        .addInterceptor(retrosheetInterceptor)
-        .build()
+    val ktorClient = HttpClient {
+        install(createRetrosheetPlugin(config)) {}
+        install(ContentNegotiation) {
+            json()
+        }
+    }
 
-    val moshi = Moshi.Builder().build()
-
-    val retrofit = Retrofit.Builder()
+    val retrofit = Ktorfit.Builder()
         .baseUrl("https://docs.google.com/spreadsheets/d/1YTWKe7_mzuwl7AO1Es1aCtj5S9buh3vKauKCMjx1j_M/") // Sheet's public URL
-        .client(okHttpClient)
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .httpClient(ktorClient)
+        .converterFactories(RetrosheetConverter(config))
         .build()
 
-    return retrofit.create(NotesApi::class.java)
+    return retrofit.createNotesApi()
 }
