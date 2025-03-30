@@ -11,7 +11,6 @@ version = "1.0-SNAPSHOT"
 repositories {
     mavenCentral()
     google()
-    maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
@@ -28,7 +27,7 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.1.1")
 
     // Retrosheet
-    implementation("io.github.theapache64:retrosheet:3.0.0-alpha01")
+    implementation("io.github.theapache64:retrosheet:3.0.0-alpha03")
 
     // SLF4J No-op
     implementation("org.slf4j:slf4j-nop:2.0.7")
